@@ -62,7 +62,7 @@ Built-in SHAP Explainer provides feature importance and local/global explanation
 │   ├── pipeline.pkl        # Preprocessing pipeline
 │   └── explainer.pkl       # SHAP explainer
 ├── data/
-│   └── heart_pl.csv        # Oryginal dataset
+│   └── heart.csv        # Oryginal dataset
 ├── assets/
 │   └── style.css           # Custom styles
 ├── CardioPredict.ipynb     # Jupyter notebook with ML pipeline
