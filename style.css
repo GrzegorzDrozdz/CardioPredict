@@ -1,0 +1,248 @@
+html, body  [class*="st-"] {
+            font-size: 15px;
+        }
+
+
+/* Sekcja hero: */
+.hero-container {
+  background-color:#e2e8f0; /* Delikatny szary odcień tła */
+  padding: 2rem; /* Wewnętrzne odstępy dla lepszego wyglądu */
+  border-radius: 0.5rem; /* Zaokrąglone rogi kontenera */
+  margin-bottom: 1.5 rem; /* Odstęp od kolejnych sekcji */
+}
+
+/* Tytuł w hero */
+.hero-title {
+  font-size: 2rem !important; /* Wielkość czcionki */
+  margin-bottom: 0.5rem; /* Odstęp od podtytułu */
+  color: #1B2B4E; /* Głęboki granatowy kolor dla czytelności */
+  font-weight: 700; /* Pogrubiona czcionka */
+}
+/*Podtytuł w sekcji hero*/
+.hero-subtitle {
+  font-size: 1.2rem !important;  /* Mniejsza czcionka niż tytuł */
+  color: #2b3c4d; /* Ciemniejszy kolor dla lepszej widoczności */
+  margin-bottom: 0.5rem; /* Odstęp od dalszej treści */
+}
+/* Tekst w sekcji hero */
+.hero-text p {
+  line-height: 1.6 !important; /* Większa interlinia dla lepszej czytelności */
+}
+
+/* Kontener karty */
+.cards-container {
+  display: flex; /* Ustawienie elastycznego układu */
+  flex-wrap: wrap; /* Karty mogą się zawijać na mniejszych ekranach */
+  gap: 1rem; /* Odstępy między kartami */
+  margin-bottom: 1.5rem; /* Odstęp od kolejnych sekcji */
+}
+
+/*  POJEDYNCZA KARTA */
+.card {
+  font-size: 1.2rem !important; /* Standardowa wielkość tekstu */
+  background-color: #fff; /* Białe tło dla czytelności */
+  border-radius: 0.5rem; /* Zaokrąglone rogi */
+  box-shadow: 0 0 10px rgba(0,0,0,0.15); /* Delikatny cień dla efektu głębi */
+  padding: 1rem; /* Wewnętrzne marginesy */
+  flex: 1 1 calc(33% - 1rem); /* Karty zajmują 1/3 szerokości dostępnej przestrzeni */
+  min-width: 310px;            /* Stała szerokość */
+  min-height: 215px;           /* Stała wysokość */
+  box-sizing: border-box; /* Wysokość i szerokość uwzględniają padding i border */
+}
+/* Stylizacja tytułu w kartach */
+.card h4 {
+  margin-top: 0; /* Usunięcie domyślnego marginesu górnego */
+  margin-bottom: 0.5rem; /* Mały odstęp od tekstu */
+  color: #1B2B4E; /* Taki sam kolor jak nagłówek hero */
+}
+/* Tekst w kartach */
+.card p {
+  margin: 0; /* Usunięcie domyślnych marginesów */
+  line-height: 1.5;  /* Optymalna interlinia dla czytelności */
+}
+
+
+/* Dostosowanie do ekranów (max 1024px) - 2 karty w rzędzie */
+@media (max-width: 1024px) {
+  .card {
+    flex: 1 1 calc(50% - 1rem); /* 2 karty w rzędzie */
+  }
+}
+
+/* Dostosowanie do ekranów telefonów (max 600px) - 1 karta w rzędzie */
+@media (max-width: 600px) {
+  .card {
+    flex: 1 1 100%; /* 1 karta na całą szerokość */
+  }
+}
+
+/* TABELA WYNIKÓW */
+
+.analysis-table {
+    width: 95%; /* szerokość tabeli */
+    margin-top: 20px;  /* Odstęp od poprzednich elementów */
+}
+
+/* Stylizacja nagłówków i komórek tabeli */
+.analysis-table th, .analysis-table td {
+    border: 2px solid #ddd; /* Subtelna ramka */
+    padding: 12px; /* Odstępy wewnątrz komórek */
+    text-align: left; /* Wyrównanie tekstu do lewej */
+    font-size: 1.2rem; /* Zwiększenie wielkości czcionki */
+}
+.analysis-table th {
+    background-color: #1E95BB; /* Niebieskie tło dla nagłówków */
+    color: white; /* Biały tekst dla kontrastu */
+
+}
+/* Kolorowanie wierszy według poziomu oceny */
+.analysis-table tr.success {
+    background-color: #d4edda;  /* Zielony */
+}
+.analysis-table tr.info {
+    background-color: #d1ecf1;  /* Niebieski */
+}
+.analysis-table tr.warning {
+    background-color: #f8d7da;  /* Czerwony */
+}
+/* Efekt podświetlenia wiersza tabeli po najechaniu */
+.analysis-table tr:hover {
+    background-color: #f1f1f1; /* Delikatna zmiana koloru */
+}
+
+/* zakładki w Streamlit */
+div[data-baseweb="tab-list"] button {
+
+    padding: 14px 20px !important; /* Powiększenie odstępów */
+}
+
+/*  Styl dla aktywnej zakładki */
+div[data-baseweb="tab-list"] button[aria-selected="true"] {
+    background-color: #1E95BB !important;  /* Niebieskie tło aktywnej zakładki */
+    color: white !important;  /* Kontrastowy biały tekst */
+
+}
+
+
+    /* Stylizacja kontenera z uploaderem */
+    div[data-testid="stFileUploader"] {
+        width: 60%;
+        margin: auto;
+        padding: 15px;
+        border: 2px solid #3498db; /* Niebieska ramka */
+        border-radius: 10px;
+        background: linear-gradient(to right, #ecf0f1, #f8f9fa); /* Subtelny gradient */
+        box-shadow: 3px 3px 10px rgba(0, 0, 0, 0.15); /* Lepszy cień */
+        text-align: center;
+        transition: all 0.3s ease-in-out;
+    }
+
+    /* Efekt hover - zmiana cienia i koloru ramki */
+    div[data-testid="stFileUploader"]:hover {
+        border: 2px solid  #e67e22; /* Ciemniejszy niebieski po najechaniu */
+        box-shadow: 5px 5px 15px rgba(0, 0, 0, 0.2);
+
+    }
+
+    /* Stylizacja etykiety "Wgraj plik" */
+    div[data-testid="stFileUploader"] label {
+        font-size: 16px;
+        color: #2c3e50;
+        font-weight: bold;
+    }
+
+    /* Stylizacja przycisku do wyboru pliku */
+    div[data-testid="stFileUploader"] button {
+        background-color: #3498db; /* Niebieski przycisk */
+        color: white;
+        font-size: 14px;
+        padding: 8px 14px;
+        border-radius: 6px;
+        border: none;
+        transition: background-color 0.3s ease;
+    }
+
+    /* Efekt hover dla przycisku */
+    div[data-testid="stFileUploader"] button:hover {
+            color: #e67e22; /* Pomarańczowy efekt po najechaniu */
+                }
+
+
+        /* Stylizacja całego expandera */
+        div[data-testid="stExpander"] {
+            border: 2px solid #1f618d;
+            border-radius: 10px;
+            background-color: #eaf2f8;
+            box-shadow: 3px 3px 10px rgba(0, 0, 0, 0.15);
+            padding: 12px;
+            width: 85%;
+            margin: auto;
+        }
+
+        /* Stylizacja nagłówka expandera */
+        div[data-testid="stExpander"] summary {
+            font-size: 18px;
+            font-weight: bold;
+            color: #1f618d;
+            transition: color 0.3s ease-in-out;
+        }
+
+        /* Efekt hover - zmiana koloru nagłówka */
+        div[data-testid="stExpander"] summary:hover {
+            color: #e67e22; /* Pomarańczowy efekt po najechaniu */
+
+        }
+        div[data-testid="stButton"] > button {
+            background-color: #3498db; /* Domyślny niebieski */
+            color: white; /* Tekst zawsze biały */
+            font-size: 18px; /* Większy rozmiar czcionki */
+            padding: 14px 22px; /* Większy przycisk */
+            border-radius: 8px;
+            border: none;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+            box-shadow: 2px 2px 6px rgba(0, 0, 0, 0.15);
+        }
+
+        /* Efekt hover - zmiana koloru i powiększenie */
+        div[data-testid="stButton"] > button:hover {
+            background-color: #e67e22; /* Pomarańczowy kolor po najechaniu */
+            color: white; /* Utrzymanie kontrastu */
+            transform: scale(1.05); /* Subtelne powiększenie */
+        }
+
+        /* Efekt kliknięcia */
+        div[data-testid="stButton"] > button:active {
+            background-color: #d35400; /* Ciemniejszy pomarańczowy */
+            color: white !important; /* Wymuszenie białego tekstu */
+            transform: scale(0.95); /* Lekka animacja zmniejszenia */
+        }
+
+
+        /* Stylizacja przycisku pobierania */
+        div[data-testid="stDownloadButton"] > button {
+            background-color: #27ae60; /* Zielony kolor przycisku */
+            color: white;
+            font-size: 18px; /* Większy rozmiar czcionki */
+            padding: 14px 22px; /* Większy przycisk */
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+            box-shadow: 2px 2px 6px rgba(0, 0, 0, 0.15);
+        }
+
+        /* Efekt hover - zmiana koloru i powiększenie */
+        div[data-testid="stDownloadButton"] > button:hover {
+            background-color: #f39c12; /* Pomarańczowy kolor po najechaniu */
+            transform: scale(1.05); /* Subtelne powiększenie */
+        }
+
+        /* Efekt kliknięcia */
+        div[data-testid="stDownloadButton"] > button:active {
+            background-color: #e67e22; /* Ciemniejszy pomarańczowy */
+            color: white; /* Tekst zawsze biały */
+            font-size: 18px; /* Większy rozmiar czcionki */
+        }
+
+
+
