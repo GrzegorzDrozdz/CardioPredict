@@ -1,4 +1,4 @@
-# 🪰 CardioPredict – Heart Disease Risk Prediction
+# ❤️ CardioPredict – Heart Disease Risk Prediction
 
 **CardioPredict** is an advanced machine learning project that integrates a complete ML pipeline into an interactive web application. The goal is to predict the risk of cardiovascular diseases using clinical data, while offering transparency through visual explanations.
 
