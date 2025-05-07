@@ -1281,31 +1281,31 @@ Korelacja nie oznacza przyczynowości, ale pomaga zidentyfikować kluczowe czynn
         emp1, col_plot, emp2 = st.columns([1, 20, 1])
         with col_plot:
             if selected == "Wiek (glukoza na czczo)":
-                st.image("Models_info/age_fastingBS.png", use_container_width=True,
+                st.image("assets/age_fastingBS.png", use_container_width=True,
                          caption="Wykres SHAP zależności: Wiek (kolor – Cukier na czczo)")
             elif selected == "Wiek (dławica wysiłkowa)":
-                st.image("Models_info/ageVSexerciseangina.png", use_container_width=True,
+                st.image("assets/ageVSexerciseangina.png", use_container_width=True,
                          caption="Wykres SHAP zależności: Wiek (kolor – Dławica wysiłkowa)")
             elif selected == "Wiek (obniżenie ST)":
-                st.image("Models_info/ageVSoldpeak.png", use_container_width=True,
+                st.image("assets/ageVSoldpeak.png", use_container_width=True,
                          caption="Wykres SHAP zależności: Wiek (kolor – Obniżenie odcinka ST)")
             elif selected == "Cholesterol całkowity (wiek)":
-                st.image("Models_info/Cholesterol.png", use_container_width=True,
+                st.image("assets/Cholesterol.png", use_container_width=True,
                          caption="Wykres SHAP zależności: Cholesterol całkowity (kolor – Wiek)")
             elif selected == "Cholesterol całkowity (ciśnienie spoczynkowe)":
-                st.image("Models_info/CholesterolVSrestingBP.png", use_container_width=True,
+                st.image("assets/CholesterolVSrestingBP.png", use_container_width=True,
                          caption="Wykres SHAP zależności: Cholesterol całkowity (kolor – Ciśnienie spoczynkowe)")
             elif selected == "Maksymalne tętno (wiek)":
-                st.image("Models_info/maxhr.png", use_container_width=True,
+                st.image("assets/maxhr.png", use_container_width=True,
                          caption="Wykres SHAP zależności: Maksymalne tętno (kolor – Wiek)")
             elif selected == "Depresja ST (wiek)":
-                st.image("Models_info/oldpeak.png", use_container_width=True,
+                st.image("assets/oldpeak.png", use_container_width=True,
                          caption="Wykres SHAP zależności: Depresja ST (kolor – Wiek)")
             elif selected == "Ciśnienie spoczynkowe (wiek)":
-                st.image("Models_info/restingbp.png", use_container_width=True,
+                st.image("assets/restingbp.png", use_container_width=True,
                          caption="Wykres SHAP zależności: Ciśnienie spoczynkowe (kolor – Wiek)")
             elif selected == "Ciśnienie spoczynkowe (maksymalne tętno)":
-                st.image("Models_info/restingBP_MAXHR.png", use_container_width=True,
+                st.image("assets/restingBP_MAXHR.png", use_container_width=True,
                          caption="Wykres SHAP zależności: Ciśnienie spoczynkowe (kolor – Maksymalne tętno)")
 
     # --- Sekcja 3: Porównanie metryk modeli ---
@@ -1326,21 +1326,21 @@ Korelacja nie oznacza przyczynowości, ale pomaga zidentyfikować kluczowe czynn
             if selected_metric == "Dokładność (Accuracy)":
                 st.markdown("#### Dokładność (Accuracy)")
                 st.image(
-                    "Models_info/acc.png",
+                    "assets/acc.png",
                     use_container_width=True,
                     caption="Porównanie dokładności modeli"
                 )
             elif selected_metric == "AUC-ROC":
                 st.markdown("#### AUC-ROC")
                 st.image(
-                    "Models_info/auc_roc.png",
+                    "assets/auc_roc.png",
                     use_container_width=True,
                     caption="Porównanie AUC-ROC"
                 )
             elif selected_metric == "Precision, Recall i F1-score":
                 st.markdown("#### Precision, Recall i F1-score")
                 st.image(
-                    "Models_info/precisionRecall.png",
+                    "assets/precisionRecall.png",
                     use_container_width=True,
                     caption="Porównanie Precision, Recall i F1-score"
                 )
