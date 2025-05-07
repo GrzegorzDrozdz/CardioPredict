@@ -8,21 +8,92 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
 from scipy import stats
+import io
+# Ustawienia strony muszą być pierwsze – wymaganie Streamlit
+st.set_page_config(
+    page_title="CardioPredict",
+    page_icon="❤️",
+    layout="wide"
+)
+if os.path.exists("style.css"):
+    with open("style.css") as f:
+        st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
-# Wczytanie modelu
+
+@st.cache_resource
 def load_model(filename):
     with open(filename, "rb") as file:
         model_tuple = pickle.load(file)
     return model_tuple[1]
 
-logistic_regression = load_model("Prediction/Logistic_Regression.pkl")
+@st.cache_resource
+def load_pipeline(filename):
+    with open(filename, "rb") as f:
+        return pickle.load(f)
 
-# Wczytanie pipeline'u transformacji
-with open("Prediction/transformation_pipeline.pkl", "rb") as f:
-    transformation_pipeline = pickle.load(f)
-# Wczytanie explainera SHAP
-with open("Prediction/shap_explainer.pkl", "rb") as f:
-    loaded_explainer = pickle.load(f)
+@st.cache_resource
+def load_shap_explainer(filename):
+    with open(filename, "rb") as f:
+        return pickle.load(f)
+
+# Wczytanie modelu, pipeline'u i explainera z cache
+logistic_regression = load_model("Prediction/Logistic_Regression.pkl")
+transformation_pipeline = load_pipeline("Prediction/transformation_pipeline.pkl")
+loaded_explainer = load_shap_explainer("Prediction/shap_explainer.pkl")
+
+@st.cache_data
+def load_heart_data():
+    try:
+        df = pd.read_csv("heart.csv")
+        return df
+    except Exception as e:
+        st.error("Nie udało się wczytać danych z pliku heart.csv.")
+        return None
+
+# Wczytanie danych
+df_heart = load_heart_data()
+
+
+def warm_up_shap():
+    if 'shap_warmed_up' not in st.session_state:  # Sprawdzamy, czy SHAP było już rozgrzane
+        try:
+            # Sztuczny przypadek pacjenta (do rozgrzewki)
+            new_patient = pd.DataFrame([{
+                "Age": 67,
+                "Sex": "M",
+                "ChestPainType": "TA",
+                "RestingBP": 118,
+                "Cholesterol": 314,
+                "FastingBS": 0,
+                "RestingECG": "Normal",
+                "MaxHR": 128,
+                "ExerciseAngina": "Y",
+                "Oldpeak": 2.5,
+                "ST_Slope": "Flat"
+            }])
+
+            # Przekształcenie danych pacjenta przez pipeline
+            new_patient_transformed = transformation_pipeline.transform(new_patient)
+
+            # Odtworzenie DataFrame z przekształconymi danymi
+            all_features = transformation_pipeline.named_steps['preprocessor'].get_feature_names_out()
+            new_patient_df = pd.DataFrame(new_patient_transformed, columns=all_features,
+                                          index=new_patient.index)
+
+            # Obliczenie SHAP dla przykładowych danych
+            shap_values = loaded_explainer(new_patient_df)
+            shap_class1 = shap_values[..., 1]  # Zwracamy wartości dla klasy 1 (HeartDisease)
+
+            # Inicjacja "rozgrzewki"
+            st.session_state.shap_warmed_up = True  # Zmienna stanu, która zapamiętuje, że SHAP zostało rozgrzane
+
+            print("✅ SHAP zostało rozgrzane.")
+        except Exception as e:
+            st.error(f"❌ Błąd podczas rozgrzewania SHAP: {e}")
+
+
+
+
 # =============================================================================
 # WPROWADZANIE DANYCH PACJENTA (SIDEBAR)
 # =============================================================================
@@ -273,37 +344,49 @@ def page_prediction(inputs):
         st.image("assets/heart.jpg", width=250,
                  caption="Źródło: [Unsplash](https://unsplash.com/photos/orange-heart-decor-NIuGLCC7q54)")
 
-    # Inicjujemy lokalne zmienne
-    prediction = None
-    prob = None
-    csv_data = None
-    shap_fig = None
 
-    def get_gauge_chart(prob: float):
+    # Initialize session state
+    for key in ("prediction", "prob", "csv_data", "shap_fig", "gauge_fig"):
+        if key not in st.session_state:
+            st.session_state[key] = None
+
+    def get_half_gauge(prob: float):
         """
-        Zwraca wykres wskaźnikowy (Gauge Chart) z wartością procentową.
+        Zwraca półokrągły wykres wskaźnikowy (Gauge Chart) z wartością procentową.
         Jeśli prob jest None lub poza zakresem [0,1], ustawia 0 jako wartość domyślną.
         """
         if prob is None or not isinstance(prob, (float, int)) or np.isnan(prob) or prob < 0 or prob > 1:
             st.warning("⚠️ Nieprawidłowa wartość prawdopodobieństwa. Ustawiono 0%.")
             prob = 0.0
 
+        bar_color = "crimson" if prob >= 0.5 else "green"
+
         fig = go.Figure(go.Indicator(
             mode="gauge+number",
             value=prob * 100,
             number={'suffix': "%", "font": {"size": 70}},
-            title={'text': "RYZYKO CHOROBY SERCA", "font": {"size": 24}},
+            title={'text': "Ryzyko choroby serca", "font": {"size": 30}},
             gauge={
-                'axis': {'range': [0, 100]},
-                'bar': {'color': "red" if prob >= 0.5 else "green"},
+                'shape': 'angular',
+                'axis': {'range': [0, 100], 'tickwidth': 1, 'tickcolor': "darkgray"},
+                'bar': {'color': bar_color},
                 'steps': [
                     {'range': [0, 50], 'color': "lightgreen"},
                     {'range': [50, 75], 'color': "yellow"},
                     {'range': [75, 100], 'color': "orange"}
-                ]
+                ],
+                'threshold': {
+                    'line': {'color': bar_color, 'width': 4},
+                    'thickness': 0.75,
+                    'value': prob * 100
+                }
             }
         ))
-        fig.update_layout(height=350)
+        fig.update_layout(
+            autosize=True,
+            margin={'l': 20, 'r': 20, 't': 40, 'b': 20},
+            height=350
+        )
         return fig
 
     def generate_csv(df_input, prediction, probability):
@@ -313,10 +396,7 @@ def page_prediction(inputs):
         df_csv = df_input.copy()
         df_csv["Predykcja"] = "TAK" if prediction == 1 else "NIE"
         df_csv["Prawdopodobieństwo"] = f"{probability * 100:.2f}%" if probability is not None else "Brak danych"
-
-        csv_modif = df_csv.to_csv(index=False, sep=",").encode("utf-8")
-
-        return csv_modif
+        return df_csv.to_csv(index=False, sep=",").encode("utf-8")
 
     def translate_features(X_transformed):
         """
@@ -344,63 +424,51 @@ def page_prediction(inputs):
         df.columns = [feature_translation.get(col, col) for col in df.columns]
         return df
 
+
+
     # --- Logika po kliknięciu przycisku ---
     if st.button("🔄 Oblicz predykcję"):
-        # Tworzymy DataFrame z danymi wejściowymi
         df_input = create_input_dataframe(inputs)
-
-        # Transformacja danych
         X_transformed = transformation_pipeline.transform(df_input)
 
-        # Predykcja (0 lub 1)
-        prediction = logistic_regression.predict(X_transformed)[0]
+        st.session_state.prediction = logistic_regression.predict(X_transformed)[0]
+        st.session_state.prob = logistic_regression.predict_proba(X_transformed)[0][1]
+        st.session_state.csv_data = generate_csv(df_input, st.session_state.prediction, st.session_state.prob)
+        st.session_state.gauge_fig = get_half_gauge(st.session_state.prob)
 
-        # Prawdopodobieństwo predykcji klasy 1
-        prob = logistic_regression.predict_proba(X_transformed)[0][1]
-
-        # Tworzenie CSV z danymi pacjenta
-        csv_data = generate_csv(df_input, prediction, prob)
-
-        # Obliczanie wartości SHAP
         try:
-            new_patient_df = translate_features(X_transformed)
-            shap_values_new_patient = loaded_explainer(new_patient_df)
-            shap_values_new_patient_class_1 = shap_values_new_patient[..., 1]
-
-            # Generowanie wykresu SHAP Waterfall
+            new_df = translate_features(X_transformed)
+            shap_vals = loaded_explainer(new_df)
+            shap_class1 = shap_vals[..., 1]
             fig_shap, ax = plt.subplots(figsize=(6, 3))
             shap.plots.waterfall(
                 shap.Explanation(
-                    values=shap_values_new_patient_class_1[0],
-                    base_values=shap_values_new_patient.base_values[0],
-                    data=new_patient_df.iloc[0],
-                    feature_names=new_patient_df.columns
+                    values=shap_class1[0],
+                    base_values=shap_vals.base_values[0],
+                    data=new_df.iloc[0],
+                    feature_names=new_df.columns
                 ),
                 show=False
             )
-            shap_fig = fig_shap
+            st.session_state.shap_fig = fig_shap
         except Exception as e:
             st.error(f"❌ Błąd podczas generowania wykresu SHAP: {e}")
-            shap_fig = None
+            st.session_state.shap_fig = None
 
     # --- Wyświetlanie wyniku ---
-    if prob is not None:
+    if st.session_state.prob is not None:
         col_chart, col_text = st.columns([1, 2])
         with col_chart:
-            # Zawsze rysujemy gauge chart - nawet przy kolejnych re-runach
-            gauge_fig = get_gauge_chart(prob)
-            st.plotly_chart(gauge_fig)
-
-            # Przyciski pobierania CSV
-            if csv_data is not None:
+            st.plotly_chart(st.session_state.gauge_fig, use_container_width=True)
+            if st.session_state.csv_data is not None:
                 st.download_button(
                     label="📥 Pobierz wynik jako CSV",
-                    data=csv_data,
+                    data=st.session_state.csv_data,
                     file_name="prediction.csv",
                     mime="text/csv"
                 )
         with col_text:
-            if prediction == 1:
+            if st.session_state.prediction == 1:
                 st.markdown("""
                 ## ⚠️ **Wynik: Podwyższone ryzyko choroby serca**
 
@@ -413,7 +481,7 @@ def page_prediction(inputs):
 
                 ### **Dlaczego jest to istotne?**
                 Wcześniejsze wykrycie zagrożenia umożliwia podjęcie kroków profilaktycznych:  
-                - Zmianę stylu życia 
+                - Zmianę stylu życia  
                 - Dalszą diagnostykę.                  
                 """)
             else:
@@ -432,43 +500,45 @@ def page_prediction(inputs):
                 - Warto dbać o profilaktykę, zdrową dietę i aktywność fizyczną.  
                 - Zalecane są okresowe badania kontrolne, aby utrzymać dobry stan zdrowia i wcześnie wykrywać ewentualne zmiany.
                 """)
-            st.markdown(f"### **Szacowane prawdopodobieństwo choroby serca: {prob * 100:.1f}%**")
+            st.markdown(f"### **Szacowane prawdopodobieństwo choroby serca: {st.session_state.prob * 100:.1f}%**")
             st.markdown("""
-                            Im wyższy procent, tym większe prawdopodobieństwo, że pacjent może mieć problemy sercowe.                  
-                            """)
+            Im wyższy procent, tym większe prawdopodobieństwo, że pacjent może mieć problemy sercowe.                  
+            """)
         st.subheader("Interpretacja wyniku: wpływ cech na predykcję (SHAP Waterfall)")
         with st.expander("ℹ️ Jak interpretować wykres SHAP Waterfall?", expanded=False):
             st.markdown("""
-                 ### 🔍 **Co przedstawia wykres SHAP Waterfall?**
-            Wykres SHAP Waterfall pokazuje, jak poszczególne cechy wpłynęły na końcowy wynik modelu.  
-            Oś pozioma to wartość predykcji, a poszczególne paski reprezentują wpływ cech:
+                        ### 🔍 **Co przedstawia wykres SHAP Waterfall?**
+                   Wykres SHAP Waterfall pokazuje, jak poszczególne cechy wpłynęły na końcowy wynik modelu.  
+                   Oś pozioma to wartość predykcji, a poszczególne paski reprezentują wpływ cech:
 
-            - **Czerwone paski**🔴 oznaczają cechy, które zwiększyły prawdopodobieństwo choroby.  
-            - **Niebieskie paski**🔵 oznaczają cechy, które je zmniejszyły.  
-            - **Wartość bazowa** E[f(X)] to średnia predykcja modelu dla całej populacji. 
-            - **f(x)** to wartość przewidywania modelu dla konkretnego przypadku, która w przypadku klasyfikacji jest **prawdopodobieństwem**.
+                   - **Czerwone paski**🔴 oznaczają cechy, które zwiększyły prawdopodobieństwo choroby.  
+                   - **Niebieskie paski**🔵 oznaczają cechy, które je zmniejszyły.  
+                   - **Wartość bazowa** E[f(X)] to średnia predykcja modelu dla całej populacji. 
+                   - **f(x)** to wartość przewidywania modelu dla konkretnego przypadku, która w przypadku klasyfikacji jest **prawdopodobieństwem**.
 
-            Wartość końcowa powstaje jako suma wartości SHAP i wartości bazowej.  
+                   Wartość końcowa powstaje jako suma wartości SHAP i wartości bazowej.  
 
-            ### ⚠ **Dlaczego niektóre cechy mogą nie być widoczne?**  
-            Model wykorzystuje one-hot encoding z drop_first=True, co oznacza, że jedna kategoria w każdej grupie  
-            jest pomijana i traktowana jako wartość domyślna. Jeśli wybrana wartość pacjenta była usuniętą kategorią,  
-            nie pojawi się na wykresie, ale jest brana pod uwagę w wartości bazowej.  
+                   ### ⚠ **Dlaczego niektóre cechy mogą nie być widoczne?**  
+                   Model wykorzystuje one-hot encoding z drop_first=True, co oznacza, że jedna kategoria w każdej grupie  
+                   jest pomijana i traktowana jako wartość domyślna. Jeśli wybrana wartość pacjenta była usuniętą kategorią,  
+                   nie pojawi się na wykresie, ale jest brana pod uwagę w wartości bazowej.  
 
-            ### 📊 **Jak interpretować wykres?**  
-            🔹 Im dłuższy pasek, tym większy wpływ cechy na predykcję.  
-            🔹 Jeśli jakaś cecha nie pojawia się na wykresie, oznacza to, że jej wpływ był minimalny lub została zakodowana jako domyślna wartość.  
-            🔹 Wynik modelu powstaje poprzez stopniowe dodawanie i odejmowanie wpływów cech do wartości bazowej.
-            """)
-        # Wyświetlenie wykresu SHAP (jeśli udało się go wygenerować)
-        if shap_fig is not None:
+                   ### 📊 **Jak interpretować wykres?**  
+                   🔹 Im dłuższy pasek, tym większy wpływ cechy na predykcję.  
+                   🔹 Jeśli jakaś cecha nie pojawia się na wykresie, oznacza to, że jej wpływ był minimalny lub została zakodowana jako domyślna wartość.  
+                   🔹 Wynik modelu powstaje poprzez stopniowe dodawanie i odejmowanie wpływów cech do wartości bazowej.
+                   """)
+        if st.session_state.shap_fig is not None:
             emp1, shap_waterfall, emp2 = st.columns([1, 20, 1])
             with shap_waterfall:
-                st.pyplot(shap_fig)
+                st.pyplot(st.session_state.shap_fig)
         else:
             st.warning("⚠️ Wykres SHAP Waterfall jest niedostępny.")
     else:
         st.info("ℹ️ Kliknij **Oblicz predykcję**, aby zobaczyć wynik i wykresy.")
+
+
+
 # =============================================================================
 #  ZAKŁADKA STRONY PREDYKCJI MASOWEJ
 # =============================================================================
@@ -479,7 +549,7 @@ def page_mass_prediction():
             "Następnie **po przesłaniu otrzymasz wyniki** do pobrania w formie pilku CSV z dodaną kolumną.\n\n")
 
 
-    with st.expander("ℹ️ Pokaż instrukcje dotyczące pliku CSV"): # expanded=True
+    with st.expander("ℹ️ Pokaż instrukcje dotyczące pliku"): # expanded=True
         st.markdown("""
         
         ### **Instrukcja dla użytkownika**
@@ -521,7 +591,7 @@ def page_mass_prediction():
         """, unsafe_allow_html=True)
 
     # Funkcja walidująca plik CSV
-    def validate_csv(df):
+    def validate(df):
         # Oczekiwana kolejność kolumn (nie sprawdzam nazw kolumn)
         expected_columns_count = 11  # Zakładamy, że plik ma 11 kolumn
         if df.shape[1] != expected_columns_count:
@@ -577,51 +647,75 @@ def page_mass_prediction():
         # Wszystkie testy przeszły pomyślnie
         return None
 
-    uploaded_file = st.file_uploader("Załaduj plik CSV", type=["csv"])
+    uploaded_file = st.file_uploader("Prześlij plik danych (CSV lub Excel)", type=["csv", "xlsx"])
 
     if uploaded_file is not None:
         try:
-            # Wczytanie danych z pliku
-            df_csv = pd.read_csv(uploaded_file)
+            # Wczytanie danych z pliku CSV lub Excel
+            if uploaded_file.name.endswith(".csv"):
+                df_input = pd.read_csv(uploaded_file)
+            elif uploaded_file.name.endswith(".xlsx"):
+                df_input = pd.read_excel(uploaded_file)
+            else:
+                st.error("❌ Obsługiwane są tylko pliki CSV oraz Excel (.xlsx).")
+                return
         except Exception as e:
-            st.error(f"Nie udało się wczytać pliku: {e}")
+            st.error(f"❌ Nie udało się wczytać pliku: {e}")
             return
 
         # Walidacja danych
-        validation_error = validate_csv(df_csv)
+        validation_error = validate(df_input)
 
         if validation_error:
             st.error(validation_error)
         else:
-            st.success("Plik CSV został poprawnie wczytany i zwalidowany!")
-            st.dataframe(df_csv.head(10))
+            st.success("✅ Plik został poprawnie wczytany i zwalidowany!")
+            st.dataframe(df_input.head(10))
 
             try:
-                X_transformed = transformation_pipeline.transform(df_csv)
+                # Transformacja danych
+                X_transformed = transformation_pipeline.transform(df_input)
             except Exception as e:
-                st.error(f"Problem z transformacją danych: {e}")
+                st.error(f"❌ Problem z transformacją danych: {e}")
                 return
 
-            # Wykonanie predykcji
+            # Predykcja i prawdopodobieństwo
             preds = logistic_regression.predict(X_transformed)
-            probs = logistic_regression.predict_proba(X_transformed)[:, 1]  # Prawdopodobieństwo klasy 1
+            probs = logistic_regression.predict_proba(X_transformed)[:, 1]  # prawdopodobieństwo klasy 1
 
-            # Dodanie kolumny z wynikami predykcji i prawdopodobieństwem
-            df_result = df_csv.copy()
+            # Dodanie kolumn do wyników
+            df_result = df_input.copy()
             df_result["HeartDisease"] = preds
-            df_result["probability"] = (probs * 100).round(2).astype(str) + "%"  # w formacie %
+            df_result["probability"] = (probs * 100).round(2).astype(str) + "%"  # Format %
 
-            st.success("Podgląd wyników:")
+            st.success("✅ Podgląd wyników:")
             st.dataframe(df_result.head(10))
 
-            # Przygotowanie danych do pobrania
+            # Przygotowanie do pobrania jako CSV
             csv_data = df_result.to_csv(index=False).encode("utf-8")
-            st.download_button(
-                "📥 Pobierz wynik jako CSV",
-                data=csv_data,
-                file_name="predictions.csv",
-                mime="text/csv"
-            )
+
+            # Przygotowanie do pobrania jako Excel
+            excel_buffer = io.BytesIO()
+            with pd.ExcelWriter(excel_buffer, engine='openpyxl') as writer:
+                df_result.to_excel(writer, index=False, sheet_name="Wyniki")
+            excel_data = excel_buffer.getvalue()
+            col_csv, col_xlsx, emp3 = st.columns([1, 1, 3])
+            with col_csv:
+                st.download_button(
+                    label="📥 Pobierz wynik jako CSV",
+                    data=csv_data,
+                    file_name="predictions.csv",
+                    mime="text/csv"
+                )
+            with col_xlsx:
+                st.download_button(
+                    label="📥 Pobierz wynik jako Excel",
+                    data=excel_data,
+                    file_name="predictions.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                )
+
+
 # =============================================================================
 #  ZAKŁADKA STRONY DO WIZUALIZACJI
 # =============================================================================
@@ -674,43 +768,57 @@ def page_visualizations(inputs):
         "ST_Slope": "Nachylenie ST",
         "FastingBS" : "Cukier we krwi czczo"
     }
-    def get_radar_chart(data):
+    # Zakresy do normalizacji dla każdej cechy
+    ranges = {
+        "RestingBP": (80, 200),
+        "Cholesterol": (85, 600),
+        "MaxHR": (60, 220),
+        "Oldpeak": (0, 6.2)
+    }
+    # Twardo zakodowane mediany dla grup wiekowych (tylko osoby bez choroby serca)
+    norms = {
+        "28-34": {"RestingBP": 120.0, "Cholesterol": 219.0, "MaxHR": 170.0, "Oldpeak": 0.0},
+        "35-39": {"RestingBP": 130.0, "Cholesterol": 215.0, "MaxHR": 165.0, "Oldpeak": 0.0},
+        "40-44": {"RestingBP": 121.0, "Cholesterol": 230.5, "MaxHR": 162.5, "Oldpeak": 0.0},
+        "45-49": {"RestingBP": 130.0, "Cholesterol": 237.5, "MaxHR": 148.0, "Oldpeak": 0.0},
+        "50-54": {"RestingBP": 130.0, "Cholesterol": 222.5, "MaxHR": 146.0, "Oldpeak": 0.0},
+        "55-59": {"RestingBP": 130.0, "Cholesterol": 226.5, "MaxHR": 150.0, "Oldpeak": 0.0},
+        "60-64": {"RestingBP": 132.0, "Cholesterol": 223.0, "MaxHR": 135.0, "Oldpeak": 0.2},
+        "65-69": {"RestingBP": 140.0, "Cholesterol": 245.5, "MaxHR": 145.0, "Oldpeak": 0.6},
+        "70-77": {"RestingBP": 140.0, "Cholesterol": 245.0, "MaxHR": 121.0, "Oldpeak": 0.4},
+    }
+    # Definicja przedziałów wiekowych użytych przy obliczeniu median
+    age_bins = [28, 35, 40, 45, 50, 55, 60, 65, 70, 78]
+    age_labels = [f"{age_bins[i]}-{age_bins[i + 1] - 1}" for i in range(len(age_bins) - 1)]
+
+    def get_radar_chart(data: dict):
         """
-        Funkcja tworząca wykres radarowy (Plotly) porównujący wartości pacjenta
-        ze średnimi wartościami w populacji.
+        Tworzy wykres radarowy porównujący parametry pacjenta
+        z medianami zdrowej populacji w jego grupie wiekowej.
         """
-        ranges = {
-            "Age": (28, 77),
-            "RestingBP": (80, 200),
-            "Cholesterol": (85, 600),
-            "MaxHR": (60, 220),
-            "Oldpeak": (0, 6.2)
-        }
-        means = {
-            "Age": 53,
-            "RestingBP": 132,
-            "Cholesterol": 243,
-            "MaxHR": 136,
-            "Oldpeak": 0.9
-        }
+        # Określenie grupy wiekowej pacjenta
+        group = pd.cut([data["Age"]], bins=age_bins, labels=age_labels, right=False)[0]
+        # Pobranie median dla tej grupy
+        med = norms.get(group)
+        if med is None:
+            st.error(f"Brak norm dla grupy wiekowej {group}")
+            return
 
         features = list(ranges.keys())
-        theta_labels = [cont_mappings[feat] for feat in features]
+        theta_labels = [cont_mappings[f] for f in features]
 
+        # Normalizacja wartości pacjenta i median
         patient_vals = []
-        mean_vals = []
-
+        median_vals = []
         for feat in features:
-            min_val, max_val = ranges[feat]
-            # Normalizacja pacjenta
-            patient_norm = (data[feat] - min_val) / (max_val - min_val)
-            # Normalizacja średniej
-            mean_norm = (means[feat] - min_val) / (max_val - min_val)
+            mn, mx = ranges[feat]
+            patient_norm = (data[feat] - mn) / (mx - mn)
+            median_norm = (med[feat] - mn) / (mx - mn)
             patient_vals.append(patient_norm)
-            mean_vals.append(mean_norm)
+            median_vals.append(median_norm)
 
+        # Budowa wykresu
         fig = go.Figure()
-        # Pacjent
         fig.add_trace(go.Scatterpolar(
             r=patient_vals,
             theta=theta_labels,
@@ -719,20 +827,19 @@ def page_visualizations(inputs):
             line=dict(color='red'),
             fillcolor='rgba(255,0,0,0.3)'
         ))
-        # Średnia populacyjna
         fig.add_trace(go.Scatterpolar(
-            r=mean_vals,
+            r=median_vals,
             theta=theta_labels,
             fill='toself',
-            name='Średnia w populacji',
+            name=f'Mediana zdrowych ({group} lat)',
             line=dict(color='blue'),
             fillcolor='rgba(0,0,255,0.3)'
         ))
         fig.update_layout(
             polar=dict(radialaxis=dict(visible=True, range=[0, 1])),
-            width=600,
-            height=600,
-            showlegend=True
+            width=600, height=600,
+            showlegend=True,
+            title=f"Porównanie parametrów pacjenta z medianą zdrowej populacji (grupa {group})"
         )
         return fig
 
@@ -740,15 +847,23 @@ def page_visualizations(inputs):
     # 4) Wyświetlenie wykresu radarowego (stała sekcja)
     # -------------------------------------------------------
     st.markdown("---")
-    st.markdown("""
-    ### **Wykres radarowy** 
 
-    Wykres radarowy pozwala na jednoczesne porównanie wielu parametrów zdrowotnych pacjenta 
-    z wartościami średnimi dla całej populacji. Na wykresie wyróżniono wartości badanego pacjenta, 
-    co ułatwia ocenę jego wyników w porównaniu do standardowych wartości w populacji.
+    st.markdown("""
+    ### **Wykres radarowy – analiza parametrów zdrowotnych pacjenta**
+    Wykres radarowy umożliwia jednoczesne porównanie kluczowych parametrów zdrowotnych pacjenta 
+    z typowymi wartościami (mediana) występującymi wśród zdrowych osób w tej samej grupie wiekowej.
+
+    **Czerwony obszar** przedstawia znormalizowane wartości pacjenta, natomiast **niebieski obszar** 
+    odpowiada medianom cech w **jego przedziale wiekowym** — 
+    wyliczonym na podstawie danych treningowych dla osób bez zdiagnozowanej choroby serca.    
+
+    Dzięki tej wizualizacji użytkownik może szybko ocenić, które cechy znacząco odbiegają od typowych wartości w populacji.
     """)
+
     radar_fig = get_radar_chart(inputs)
     st.plotly_chart(radar_fig, use_container_width=True)
+
+
     # Tworzymy listę wszystkich zmiennych
     all_vars = cont_vars + cat_vars
 
@@ -778,14 +893,6 @@ def page_visualizations(inputs):
 
 
 
-    # -------------------------------------------------------
-    # 6) Wczytanie danych z pliku "heart.csv"
-    # -------------------------------------------------------
-    try:
-        df_heart = pd.read_csv("heart.csv")
-    except Exception as e:
-        st.error("Nie udało się wczytać danych z pliku heart.csv.")
-        return
 
     # -------------------------------------------------------
     # 7) Wyświetlanie wykresów w zależności od typu zmiennej
@@ -1114,60 +1221,131 @@ def page_analysis(inputs):
 # =============================================================================
 #  ZAKŁADKA STRONY OCENA MODELI
 # =============================================================================
+
 def page_model_evaluation():
-    st.title("📊 Skuteczność Predykcji")
+    st.title("📊 Skuteczność i Interpretacja Modeli")
     st.markdown("""
-    W tej sekcji możesz przeanalizować skuteczność i charakterystykę używanych algorytmów uczenia maszynowego. 
-    W projekcie wykorzystywany został model regresji logistycznej do predykcji, co zostało dodatkowo wsparte analizą korelacji oraz interpretacją decyzji modelu.
+    W tej sekcji możesz przeanalizować skuteczność i charakterystykę używanych algorytmów uczenia maszynowego.  
+    W projekcie wykorzystywany został model regresji logistycznej do predykcji, wsparty analizą korelacji
+    oraz dogłębną interpretacją decyzji modelu za pomocą wykresów SHAP.
     """)
 
     # --- Sekcja 1: Analiza korelacji ---
     st.markdown("---")
     st.markdown("### Analiza korelacji")
-    col_corr1, col_corr2 = st.columns([2, 1])
+    col_corr1, col_corr2 = st.columns([2, 2])
     with col_corr1:
         st.image("assets/corr.png", use_container_width=True)
     with col_corr2:
         st.markdown("""
 **Wnioski z korelacji:**  
-- **Dodatnie korelacje:** cechy takie jak płaskie nachylenie ST, dławica wysiłkowa i obniżenie ST silnie korelują z ryzykiem choroby serca.  
-- **Ujemne korelacje:** większe wartości maksymalnego tętna oraz nachylenie ST w górę wskazują na niższe ryzyko.  
+Najsilniejszą dodatnią korelację z występowaniem choroby serca wykazuje **płaskie nachylenie odcinka ST** (0.55), co sugeruje, że osoby z takim wynikiem testu wysiłkowego są bardziej narażone na problemy kardiologiczne. Wysoką korelacją dodatnią charakteryzuje się także **obecność dławicy wysiłkowej** (0.49) oraz **obniżenie odcinka ST (Depresja ST)** (0.40), co dodatkowo potwierdza istotność wyników testów wysiłkowych w ocenie ryzyka.  
+**Płeć** (0.31) oraz **wiek** (0.28) również wykazują pozytywną korelację, wskazując, że starszy wiek i bycie mężczyzną wiążą się z większym ryzykiem.  
+Warto zaznaczyć, że **poziom cukru we krwi na czczo (FastingBS)** ma umiarkowaną dodatnią korelację (0.27), co sugeruje potencjalny związek między zaburzeniami gospodarki węglowodanowej a chorobami serca.
+
+Z kolei zmienne takie jak **maksymalne tętno (MaxHR)** (-0.40), **poziom cholesterolu** (-0.23) oraz **nachylenie odcinka ST w górę** (-0.62) wykazują istotne ujemne korelacje z chorobą serca. Oznacza to, że wyższe wartości tych parametrów mogą być związane z niższym ryzykiem wystąpienia choroby sercowo-naczyniowej.  
+W szczególności **nachylenie ST w górę** jest silnie negatywnie skorelowane, co czyni ten parametr jednym z ważniejszych predyktorów ochronnych.
 
 Korelacja nie oznacza przyczynowości, ale pomaga zidentyfikować kluczowe czynniki wpływające na ryzyko.
         """)
-
-    # --- Sekcja 2: Interpretacja modelu regresji logistycznej ---
+        # --- Sekcja 2: Interpretacja modelu regresji logistycznej ---
     st.markdown("---")
     st.markdown("### Interpretacja modelu regresji logistycznej")
     st.markdown("""
-    Poniższy wykres SHAP przedstawia wpływ poszczególnych cech na wynik modelu regresji logistycznej.  
-    Dzięki tej interpretacji możliwe jest zrozumienie, które cechy najbardziej przyczyniają się do przewidywania ryzyka.  
-            """)
-    col_inter1, col_inter2, = st.columns([1, 1])
+     Poniższy wykres SHAP przedstawia wpływ poszczególnych cech na wynik modelu regresji logistycznej.  
+     Dzięki tej interpretacji możliwe jest zrozumienie, które cechy najbardziej przyczyniają się do przewidywania ryzyka.  
+             """)
+    emp1,col_inter1, col_inter2,emp2 = st.columns([1, 12,12,1])
     with col_inter1:
-        # Placeholder – dostosuj ścieżkę według potrzeb
         st.image("assets/regression_features_importance.png", use_container_width=True)
     with col_inter2:
         st.image("assets/regression_features_importance_.png", use_container_width=True)
-    with st.expander("Wyświetl wykres zależności dla poszczególnych cech"):
-        st.image("assets/download.png", use_container_width=True)
 
 
-
-    # Expander: Porównanie wykresów metryk modeli
+    # --- Sekcja 2: SHAP Dependence: wybór cechy i obrazek ---
     st.markdown("---")
-    with st.expander("Porównanie metryk modeli"):
-        st.markdown("#### Porównanie dokładności modeli")
-        st.image("assets/acc.png", use_container_width=True,
-                 caption="Wykres słupkowy – porównanie dokładności modeli ML.")
-        st.markdown("#### Porównanie AUC-ROC")
-        st.image("assets/auc_roc.png", use_container_width=True,
-                 caption="Wykres słupkowy – porównanie AUC-ROC dla poszczególnych modeli.")
-        st.markdown("#### Porównanie Precision, Recall i F1-score")
-        st.image("assets/Prec_rec_f1.png", use_container_width=True,
-                 caption="Zestawienie metryk precyzji, czułości i F1-score.")
+    with st.expander("Szczegółowa analiza zależności SHAP (Dependence Plot)"):
+        options = [
+            "Wiek (glukoza na czczo)",
+            "Wiek (dławica wysiłkowa)",
+            "Wiek (obniżenie ST)",
+            "Cholesterol całkowity (wiek)",
+            "Cholesterol całkowity (ciśnienie spoczynkowe)",
+            "Maksymalne tętno (wiek)",
+            "Depresja ST (wiek)",
+            "Ciśnienie spoczynkowe (wiek)",
+            "Ciśnienie spoczynkowe (maksymalne tętno)"
+        ]
+        selected = st.selectbox("Wybierz wykres zależności:", options, index=5)
 
-    # Expander: Szczegółowa analiza poszczególnych modeli
+        emp1, col_plot, emp2 = st.columns([1, 20, 1])
+        with col_plot:
+            if selected == "Wiek (glukoza na czczo)":
+                st.image("Models_info/age_fastingBS.png", use_container_width=True,
+                         caption="Wykres SHAP zależności: Wiek (kolor – Cukier na czczo)")
+            elif selected == "Wiek (dławica wysiłkowa)":
+                st.image("Models_info/ageVSexerciseangina.png", use_container_width=True,
+                         caption="Wykres SHAP zależności: Wiek (kolor – Dławica wysiłkowa)")
+            elif selected == "Wiek (obniżenie ST)":
+                st.image("Models_info/ageVSoldpeak.png", use_container_width=True,
+                         caption="Wykres SHAP zależności: Wiek (kolor – Obniżenie odcinka ST)")
+            elif selected == "Cholesterol całkowity (wiek)":
+                st.image("Models_info/Cholesterol.png", use_container_width=True,
+                         caption="Wykres SHAP zależności: Cholesterol całkowity (kolor – Wiek)")
+            elif selected == "Cholesterol całkowity (ciśnienie spoczynkowe)":
+                st.image("Models_info/CholesterolVSrestingBP.png", use_container_width=True,
+                         caption="Wykres SHAP zależności: Cholesterol całkowity (kolor – Ciśnienie spoczynkowe)")
+            elif selected == "Maksymalne tętno (wiek)":
+                st.image("Models_info/maxhr.png", use_container_width=True,
+                         caption="Wykres SHAP zależności: Maksymalne tętno (kolor – Wiek)")
+            elif selected == "Depresja ST (wiek)":
+                st.image("Models_info/oldpeak.png", use_container_width=True,
+                         caption="Wykres SHAP zależności: Depresja ST (kolor – Wiek)")
+            elif selected == "Ciśnienie spoczynkowe (wiek)":
+                st.image("Models_info/restingbp.png", use_container_width=True,
+                         caption="Wykres SHAP zależności: Ciśnienie spoczynkowe (kolor – Wiek)")
+            elif selected == "Ciśnienie spoczynkowe (maksymalne tętno)":
+                st.image("Models_info/restingBP_MAXHR.png", use_container_width=True,
+                         caption="Wykres SHAP zależności: Ciśnienie spoczynkowe (kolor – Maksymalne tętno)")
+
+    # --- Sekcja 3: Porównanie metryk modeli ---
+    st.markdown("---")
+    with st.expander(" Porównanie metryk modeli"):
+        metric_options = [
+            "Dokładność (Accuracy)",
+            "AUC-ROC",
+            "Precision, Recall i F1-score"
+        ]
+        selected_metric = st.selectbox(
+            "Wybierz metrykę:",
+            metric_options,
+            index=0
+        )
+        emp1, col, emp2 = st.columns([1, 20, 1])
+        with col:
+            if selected_metric == "Dokładność (Accuracy)":
+                st.markdown("#### Dokładność (Accuracy)")
+                st.image(
+                    "Models_info/acc.png",
+                    use_container_width=True,
+                    caption="Porównanie dokładności modeli"
+                )
+            elif selected_metric == "AUC-ROC":
+                st.markdown("#### AUC-ROC")
+                st.image(
+                    "Models_info/auc_roc.png",
+                    use_container_width=True,
+                    caption="Porównanie AUC-ROC"
+                )
+            elif selected_metric == "Precision, Recall i F1-score":
+                st.markdown("#### Precision, Recall i F1-score")
+                st.image(
+                    "Models_info/precisionRecall.png",
+                    use_container_width=True,
+                    caption="Porównanie Precision, Recall i F1-score"
+                )
+
+        # Expander: Szczegółowa analiza poszczególnych modeli
     st.markdown("---")
     with st.expander("Szczegółowa analiza poszczególnych modeli"):
         st.markdown("Wybierz model, aby zobaczyć szczegółowe wyniki:")
@@ -1185,64 +1363,65 @@ Korelacja nie oznacza przyczynowości, ale pomaga zidentyfikować kluczowe czynn
         if selected_model == "Logistic Regression":
             st.image("assets/Logistic_regresion_evaluation.png", use_container_width=True)
             st.markdown("""
-**Regresja logistyczna** zapewnia stabilne wyniki oraz wysoką interpretowalność dzięki współczynnikom regresji.
-            """)
+   **Regresja logistyczna** zapewnia stabilne wyniki oraz wysoką interpretowalność dzięki współczynnikom regresji.
+               """)
         elif selected_model == "Stacking Classifier":
             st.image("assets/SC_evaluation.png", use_container_width=True)
             st.markdown("""
-**Stacking Classifier** łączy wyniki wielu modeli bazowych, co przekłada się na wyższą generalizację.
-            """)
+   **Stacking Classifier** łączy wyniki wielu modeli bazowych, co przekłada się na wyższą generalizację.
+               """)
         elif selected_model == "Voting Classifier Soft":
             st.image("assets/voting_cassifier_evaluation.png", use_container_width=True)
             st.markdown("""
-**Voting Classifier Soft** oblicza średnie prawdopodobieństwa, osiągając wysoką precyzję.
-            """)
+   **Voting Classifier Soft** oblicza średnie prawdopodobieństwa, osiągając wysoką precyzję.
+               """)
         elif selected_model == "Voting Classifier Hard":
             st.image("assets/voting_classifier_hard_evaluation.png", use_container_width=True)
             st.markdown("""
-**Voting Classifier Hard** stosuje zasadę większości głosów, choć nie obsługuje prognozowania prawdopodobieństw.
-            """)
+   **Voting Classifier Hard** stosuje zasadę większości głosów, choć nie obsługuje prognozowania prawdopodobieństw.
+               """)
         elif selected_model == "SVM":
             st.image("assets/SVM_evaluation.png", use_container_width=True)
             st.markdown("""
-**Support Vector Machine (SVM)** osiąga wysokie wyniki, choć wymaga precyzyjnego strojenia parametrów.
-            """)
+   **Support Vector Machine (SVM)** osiąga wysokie wyniki, choć wymaga precyzyjnego strojenia parametrów.
+               """)
         elif selected_model == "Random Forest":
             st.image("assets/RF_evaluation.png", use_container_width=True)
             st.markdown("""
-**Random Forest** prezentuje stabilne wyniki oraz umożliwia analizę ważności cech, co wspiera interpretację predykcji.
-            """)
+   **Random Forest** prezentuje stabilne wyniki oraz umożliwia analizę ważności cech, co wspiera interpretację predykcji.
+               """)
             st.markdown("#### Ważność cech - Random Forest")
             st.image("assets/RF_feature_importance.png", use_container_width=True)
         elif selected_model == "KNN":
             st.image("assets/KNN_evaluation.png", use_container_width=True)
             st.markdown("""
-**K-Nearest Neighbors (KNN)** jest prosty w interpretacji, jednak jego skuteczność może być ograniczona przy dużych zbiorach danych.
-            """)
+   **K-Nearest Neighbors (KNN)** jest prosty w interpretacji, jednak jego skuteczność może być ograniczona przy dużych zbiorach danych.
+               """)
         elif selected_model == "Decision Tree":
             st.image("assets/DT_evaluation.png", use_container_width=True)
             st.markdown("""
-**Drzewo Decyzyjne** wyróżnia się przejrzystą strukturą, co ułatwia interpretację, choć osiąga niższe metryki.
-            """)
+   **Drzewo Decyzyjne** wyróżnia się przejrzystą strukturą, co ułatwia interpretację, choć osiąga niższe metryki.
+               """)
             st.markdown("#### Ważność cech - Decision Tree")
             st.image("assets/DC_feature_importance.png", use_container_width=True)
             st.markdown("""
-Widać, że cechy takie jak ST_Slope, Dławica wysiłkowa oraz Oldpeak mają największy wpływ na decyzję drzewa.
-            """)
+   Widać, że cechy takie jak ST_Slope, Dławica wysiłkowa oraz Oldpeak mają największy wpływ na decyzję drzewa.
+               """)
             st.markdown("#### Struktura drzewa decyzyjnego")
             st.image("assets/decision_tree.jpg", use_container_width=True)
             st.markdown("""
-Drzewo pokazuje, jak kolejne warunki decyzyjne prowadzą do ostatecznego podziału na klasy (Choroba serca / Brak choroby).
-            """)
+   Drzewo pokazuje, jak kolejne warunki decyzyjne prowadzą do ostatecznego podziału na klasy (Choroba serca / Brak choroby).
+               """)
 
     st.markdown("---")
     st.markdown("""
-    ### Komentarz
-    - **Stacking Classifier** i **Voting Classifier Soft** uzyskały najwyższe metryki (AUC, F1-score), co świadczy o skuteczności łączenia wyników wielu modeli.
-    - **Random Forest**, **SVM** oraz **Logistic Regression** prezentują stabilne wyniki.
-    - **Decision Tree** i **KNN** zwarcie charakteryzują się łatwością interpretacji i prostotą implementacji, mimo nieco niższych metryk.
-    - W praktycznych zastosowaniach medycznych istotna jest nie tylko wysoka skuteczność (AUC), ale także przejrzystość interpretacji (Precision, Recall, F1-score).
-    """)
+       ### Komentarz
+       - **Stacking Classifier** i **Voting Classifier Soft** uzyskały najwyższe metryki (AUC, F1-score), co świadczy o skuteczności łączenia wyników wielu modeli.
+       - **Random Forest**, **SVM** oraz **Logistic Regression** prezentują stabilne wyniki.
+       - **Decision Tree** i **KNN** zwarcie charakteryzują się łatwością interpretacji i prostotą implementacji, mimo nieco niższych metryk.
+       - W praktycznych zastosowaniach medycznych istotna jest nie tylko wysoka skuteczność (AUC), ale także przejrzystość interpretacji (Precision, Recall, F1-score).
+       """)
+
 
 
 # =============================================================================
@@ -1331,14 +1510,7 @@ def page_about():
 # START APLIKACJI
 # =============================================================================
 def main():
-    st.set_page_config(
-        page_title="CardioPredict",
-        page_icon="❤️",
-        layout="wide"
-    )
-    if os.path.exists("style.css"):
-        with open("style.css") as f:
-            st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+    warm_up_shap()
 
     inputs = sidebar_inputs()
 
@@ -1393,7 +1565,7 @@ def main():
     </div>
     """
 
-    st.markdown(custom_footer , unsafe_allow_html=True)
+ #   st.markdown(custom_footer , unsafe_allow_html=True)
 
 
 if __name__ == '__main__':
