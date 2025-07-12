@@ -11,6 +11,9 @@ This project includes:
 - A **Streamlit-based web app** for interactive heart disease prediction and analysis.
 
 ---
+## Demo Video
+Check out the presentation of the interface and key features here:  
+[![Watch the demo](https://img.youtube.com/vi/BI8z01Uph1U?si=yP70yOXioS6ldWDq/0.jpg)](https://www.youtube.com/watch?v=BI8z01Uph1U?si=yP70yOXioS6ldWDq)
 
 ## 🧠 ML Pipeline (Jupyter Notebook)
 
@@ -51,6 +54,11 @@ Built-in SHAP Explainer provides feature importance and local/global explanation
 
 ---
 
+## Technologies & Tools
+- **Languages:** Python, HTML, CSS  
+- **Libraries:** scikit-learn, SHAP, Pandas, NumPy, Plotly, Matplotlib, Seaborn  
+- **Web Framework:** Streamlit  
+- **Environment:** Jupyter Notebook / Google Colab  
 
 ## 📁 Project Structure
 ```
