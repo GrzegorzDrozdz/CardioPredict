@@ -1,10 +1,10 @@
-# ❤️ CardioPredict – Heart Disease Risk Prediction
+# CardioPredict – Heart Disease Risk Prediction
 
 **CardioPredict** is an advanced machine learning project that integrates a complete ML pipeline into an interactive web application. The goal is to predict the risk of cardiovascular diseases using clinical data, while offering transparency through visual explanations.
 
 ---
 
-## 📊 Overview
+## Overview
 
 This project includes:
 - A **Jupyter Notebook** implementing a full ML pipeline from preprocessing to SHAP-based model interpretation.
@@ -15,38 +15,37 @@ This project includes:
 Check out the presentation of the interface and key features here:  
 [![Watch the demo](https://img.youtube.com/vi/BI8z01Uph1U?si=yP70yOXioS6ldWDq/0.jpg)](https://www.youtube.com/watch?v=BI8z01Uph1U?si=yP70yOXioS6ldWDq)
 
-## 🧠 ML Pipeline (Jupyter Notebook)
+## ML Pipeline (Jupyter Notebook)
 
-### 🔍 Data Preprocessing
+### Data Preprocessing
 - Handling missing values, outliers
 - RobustScaler for numerical features
 - One-Hot Encoding for categorical features
 - Pipelines built using `scikit-learn`
 
-### 🤖 Model Training
+### Model Training
 - Classifiers: Logistic Regression, SVM, KNN, Random Forest
 - Ensemble: Voting & Stacking
 - GridSearchCV for hyperparameter tuning
 - Evaluation: Accuracy, Precision, Recall, F1-score, ROC-AUC
 - Cross-validation applied
 
-### 📊 Model Explainability
+### Model Explainability
 - Global insights: SHAP Summary, Beeswarm, and Dependence Plots
 - Local insights: Force Plot, Waterfall, and Decision Plots
 
 ---
-## 🌐 Web Application (Streamlit)
+## Web Application (Streamlit)
 
-### 🔹 Single Prediction
+### Single Prediction
 Input patient health parameters and receive a binary prediction (0 = low risk, 1 = high risk), along with **SHAP visualizations**.
 
-### 🔹 Mass Prediction (CSV Upload)
-Upload a CSV file containing patient data. The app processes the file, applies transformations, and returns a CSV with prediction results.
-
-### 🔹 Interactive Visualizations
+### Batch Prediction
+(CSV & Excel) Upload a CSV or Excel file containing patient data. The app processes the file, applies transformations, and returns the prediction results (available for download in both CSV and Excel formats). 
+### Interactive Visualizations
 Use dynamic plots (histograms, boxplots, pie charts, radar charts) to compare user inputs with population data.
 
-### 🔹 Model Interpretability
+### Model Interpretability
 Built-in SHAP Explainer provides feature importance and local/global explanations using:
 - Summary Plots
 - Dependence Plots
@@ -60,7 +59,7 @@ Built-in SHAP Explainer provides feature importance and local/global explanation
 - **Web Framework:** Streamlit  
 - **Environment:** Jupyter Notebook / Google Colab  
 
-## 📁 Project Structure
+## Project Structure
 ```
 ├── app.py                  # Streamlit App
 ├── requirements.txt        # Python dependencies
@@ -78,12 +77,10 @@ Built-in SHAP Explainer provides feature importance and local/global explanation
 ---
 
 
-## ▶️ Running the Project
+## Running the Project
 
-### 🔄 Streamlit Web App:
+### Streamlit Web App:
 ```bash
 streamlit run app.py
 ```
 
-
----
