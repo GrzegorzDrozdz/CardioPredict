@@ -1,19 +1,41 @@
-# CardioPredict – Heart Disease Risk Prediction
+<div align="center">
 
-**CardioPredict** is an advanced machine learning project that integrates a complete ML pipeline into an interactive web application. The goal is to predict the risk of cardiovascular diseases using clinical data, while offering transparency through visual explanations.
+# ❤️ CardioPredict
+### Heart Disease Risk Assessment System using Explainable AI
+
+![Python](https://img.shields.io/badge/Python-3.9%2B-blue?style=for-the-badge&logo=python)
+![Streamlit](https://img.shields.io/badge/Streamlit-App-ff4b4b?style=for-the-badge&logo=streamlit)
+![Scikit-Learn](https://img.shields.io/badge/scikit--learn-Machine%20Learning-orange?style=for-the-badge&logo=scikit-learn)
+![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
+
+<p align="center">
+  <a href="#overview">Overview</a> •
+  <a href="#key-features">Key Features</a> •
+  <a href="#tech-stack">Tech Stack</a> •
+  <a href="#installation">Installation</a> •
+  <a href="#model-performance">Model Performance</a>
+</p>
+
+</div>
 
 ---
 
-## Overview
+## 🎬 Project Demo
+Watch the full presentation of the interface and key features on YouTube:
 
-This project includes:
-- A **Jupyter Notebook** implementing a full ML pipeline from preprocessing to SHAP-based model interpretation.
-- A **Streamlit-based web app** for interactive heart disease prediction and analysis.
+[![Watch the demo](https://img.youtube.com/vi/BI8z01Uph1U/maxresdefault.jpg)](https://www.youtube.com/watch?v=BI8z01Uph1U)
 
 ---
-## Demo Video
-Check out the presentation of the interface and key features here:  
-[![Watch the demo](https://img.youtube.com/vi/BI8z01Uph1U?si=yP70yOXioS6ldWDq/0.jpg)](https://www.youtube.com/watch?v=BI8z01Uph1U?si=yP70yOXioS6ldWDq)
+
+## 📖 Overview
+
+**CardioPredict** is an end-to-end Machine Learning solution designed to predict the risk of cardiovascular diseases based on clinical data. Unlike standard "black-box" models, this project prioritizes **transparency and interpretability** by integrating **SHAP (SHapley Additive exPlanations)** values.
+
+The system consists of two main components:
+1.  **Backend ML Pipeline:** rigorous data preprocessing, model selection, hyperparameter tuning, and evaluation.
+2.  **Frontend Web App:** An interactive Streamlit dashboard allowing doctors and users to input data (single or batch) and receive understandable risk assessments.
+
+---
 
 ## ML Pipeline (Jupyter Notebook)
 
@@ -54,10 +76,15 @@ Built-in SHAP Explainer provides feature importance and local/global explanation
 ---
 
 ## Technologies & Tools
-- **Languages:** Python, HTML, CSS  
-- **Libraries:** scikit-learn, SHAP, Pandas, NumPy, Plotly, Matplotlib, Seaborn  
-- **Web Framework:** Streamlit  
-- **Environment:** Jupyter Notebook / Google Colab  
+| Category | Technologies |
+| :--- | :--- |
+| **Core** | Python 3.x |
+| **Machine Learning** | scikit-learn, NumPy, Pandas |
+| **Explainability** | SHAP (SHapley Additive exPlanations) |
+| **Visualization** | Matplotlib, Seaborn, Plotly |
+| **Web Framework** | Streamlit |
+| **Environment** | Jupyter Notebook, Anaconda |
+
 
 ## Project Structure
 ```
