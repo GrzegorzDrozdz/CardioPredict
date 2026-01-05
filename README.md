@@ -8,14 +8,6 @@
 ![Scikit-Learn](https://img.shields.io/badge/scikit--learn-Machine%20Learning-orange?style=for-the-badge&logo=scikit-learn)
 ![Bachelor's Thesis](https://img.shields.io/badge/Project-Bachelor's_Thesis-blue?style=for-the-badge)
 
-<p align="center">
-  <a href="#overview">Overview</a> •
-  <a href="#key-features">Key Features</a> •
-  <a href="#tech-stack">Tech Stack</a> •
-  <a href="#installation">Installation</a> •
-  <a href="#model-performance">Model Performance</a>
-</p>
-
 </div>
 
 ---
