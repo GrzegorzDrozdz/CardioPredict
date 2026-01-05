@@ -6,7 +6,7 @@
 ![Python](https://img.shields.io/badge/Python-3.9%2B-blue?style=for-the-badge&logo=python)
 ![Streamlit](https://img.shields.io/badge/Streamlit-App-ff4b4b?style=for-the-badge&logo=streamlit)
 ![Scikit-Learn](https://img.shields.io/badge/scikit--learn-Machine%20Learning-orange?style=for-the-badge&logo=scikit-learn)
-![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
+![Bachelor's Thesis](https://img.shields.io/badge/Project-Bachelor's_Thesis-blue?style=for-the-badge)
 
 <p align="center">
   <a href="#overview">Overview</a> •
